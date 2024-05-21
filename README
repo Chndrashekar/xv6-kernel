@@ -1,53 +1,104 @@
-xv6
+# xv6
 
-NOTE: we have stopped maintaining the x86 version of xv6, and switched
-our efforts to the RISC-V version
-(https://github.com/mit-pdos/xv6-riscv.git)
+xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix Version 6 (v6). xv6 loosely follows the structure and style of v6, but is implemented for a modern x86-based multiprocessor using ANSI C.
 
-xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
-Version 6 (v6).  xv6 loosely follows the structure and style of v6,
-but is implemented for a modern x86-based multiprocessor using ANSI C.
+## Project 1: Implementing Shell Commands in xv6
 
-ACKNOWLEDGMENTS
+### Introduction
+Implementing and modifying Unix-like shell commands in the xv6 operating system.
 
-xv6 is inspired by John Lions's Commentary on UNIX 6th Edition (Peer
-to Peer Communications; ISBN: 1-57398-013-7; 1st edition (June 14,
-2000)). See also https://pdos.csail.mit.edu/6.828/, which
-provides pointers to on-line resources for v6.
+### Modified ls Command
+**Feature Enhancements:**
+- **Automatic Hiding of Hidden Files and Directories:** By default, the `ls` command omits hidden files and directories (those prefixed with a `.`), reducing clutter from system and configuration files.
+- **Directory Differentiation:** Directory names now have a trailing slash (`/`), allowing users to easily distinguish them from regular files.
+- **Introduction of the `-a` Flag:** The new `-a` flag shows all files, including hidden ones, providing a complete directory view when needed.
 
-xv6 borrows code from the following sources:
-    JOS (asm.h, elf.h, mmu.h, bootasm.S, ide.c, console.c, and others)
-    Plan 9 (entryother.S, mp.h, mp.c, lapic.c)
-    FreeBSD (ioapic.c)
-    NetBSD (console.c)
+**Files to Edit:** `ls.c`, `Makefile`
 
-The following people have made contributions: Russ Cox (context switching,
-locking), Cliff Frey (MP), Xiao Yu (MP), Nickolai Zeldovich, and Austin
-Clements.
+### Implementing the sleep Command
+**Implementation Details:** Implement the UNIX program `sleep` for xv6. The `sleep` command pauses for a user-specified number of ticks. The implementation should handle invalid inputs by printing an error message.
 
-We are also grateful for the bug reports and patches contributed by Silas
-Boyd-Wickizer, Anton Burtsev, Cody Cutler, Mike CAT, Tej Chajed, eyalz800,
-Nelson Elhage, Saar Ettinger, Alice Ferrazzi, Nathaniel Filardo, Peter
-Froehlich, Yakir Goaron,Shivam Handa, Bryan Henry, Jim Huang, Alexander
-Kapshuk, Anders Kaseorg, kehao95, Wolfgang Keller, Eddie Kohler, Austin
-Liew, Imbar Marinescu, Yandong Mao, Matan Shabtay, Hitoshi Mitake, Carmi
-Merimovich, Mark Morrissey, mtasm, Joel Nider, Greg Price, Ayan Shafqat,
-Eldar Sehayek, Yongming Shen, Cam Tenny, tyfkda, Rafael Ubal, Warren
-Toomey, Stephen Tu, Pablo Ventura, Xi Wang, Keiichi Watanabe, Nicolas
-Wolovick, wxdao, Grant Wu, Jindong Zhang, Icenowy Zheng, and Zou Chang Wei.
+**Files to Edit:** `sleep.c`, `Makefile`
 
-The code in the files that constitute xv6 is
-Copyright 2006-2018 Frans Kaashoek, Robert Morris, and Russ Cox.
+### Implementing the uniq Command
+**Implementation Details:** The `uniq` command filters out adjacent duplicate lines from the input file and writes the filtered data to the output. Additionally, implement the following flags:
+- `-c`: Prefix lines by the number of occurrences
+- `-i`: Ignore differences in case when comparing
+- `-d`: Only print duplicate lines
 
-ERROR REPORTS
+**Files to Edit:** `uniq.c`, `Makefile`
 
-We don't process error reports (see note on top of this file).
+### Implementing the find Command
+**Implementation Details:** The `find` command searches for files in a directory hierarchy. Implement the following features:
+- Default find functionality: `find <folder> -name <name>`
+- `-type` flag with `f` (files) and `d` (directories)
+- `-size` flag with exact, greater than, and less than byte sizes
 
-BUILDING AND RUNNING XV6
+**Files to Edit:** `find.c`, `Makefile`
 
-To build xv6 on an x86 ELF machine (like Linux or FreeBSD), run
-"make". On non-x86 or non-ELF machines (like OS X, even on x86), you
-will need to install a cross-compiler gcc suite capable of producing
-x86 ELF binaries (see https://pdos.csail.mit.edu/6.828/).
-Then run "make TOOLPREFIX=i386-jos-elf-". Now install the QEMU PC
-simulator and run "make qemu".
+## Syscalls and Schedulers
+
+### Adding time_scheduled Syscall
+**Implementation Details:** Implement the `time_scheduled(pid)` system call to track how many ticks each process has been scheduled. Return 0 for unscheduled processes and -1 for non-existent processes.
+
+**Files to Edit:** `sysproc.c`, `user.h`, `usys.S`, `Makefile`
+
+### Implementing a Basic Scheduler
+**Scheduler Options:**
+- FIFO: First-in, first-out
+- SJF: Shortest job first
+- RR: Round-robin
+- Stride: Stride scheduling
+
+**Files to Edit:** `proc.c`, `proc.h`, `Makefile`
+
+### Implemented a More Interesting Scheduler
+**Scheduler Options:**
+- Lottery: Implement lottery scheduling with a syscall to set and get ticket counts
+- Priority: Support at least 3 priority levels with FIFO, SJF, or RR within each level
+- STCF: Shortest time to completion first using exponential averaging for job size
+
+**Files to Edit:** `proc.c`, `proc.h`, `Makefile`
+
+### Performance Analysis
+Compare the new schedulers against the default scheduler using `time_scheduled()` and `uptime()`. Analyze performance for the following commands:
+- `stressfs`
+- `uniq`
+- `find`
+- `cat README | uniq`
+
+## Virtual Memory
+
+### Understanding sbrk()
+**Task Details:** Modify `sbrk()` to remove page allocation, causing it to only increment the process size. Analyze what breaks and explain why.
+
+**Files to Edit:** `sysproc.c`
+
+### Implementing Lazy Allocation
+**Task Details:** Implement lazy page allocation by handling page faults in `trap.c`. Ensure simple commands like `echo`, `ls`, `cat`, `wc`, and `mkdir` work correctly.
+
+**Files to Edit:** `trap.c`, `vm.c`
+
+### Evaluating and Explaining Lazy Allocation
+**Task Details:** Add print statements in page fault handling code and take screenshots of basic commands. Explain the implementation and how the screenshots demonstrate correct behavior.
+
+## File Systems
+
+### Adding lseek Support
+**Task Details:** Implement the `lseek` system call and modify `filewrite` to handle holes in files.
+
+**Files to Edit:** `file.c`, `file.h`
+
+### Implement the symlink(target, path) system call to create symbolic links and modify open to handle them.
+
+**Files to Edit:** `syscall.c`, `sysfile.c`, `file.h`, `stat.h`
+
+### Supporting Large Files
+**Task Details:** Modify the file system to support doubly-indirect blocks, allowing files up to 16,523 blocks in size.
+
+**Files to Edit:** `fs.c`, `fs.h`
+
+### Implementing Extent-Based Files
+**Task Details:** Modify the inode structure to support extent-based files and demonstrate their functionality using a user program.
+
+**Files to Edit:** `fs.c`, `fs.h`, `file.c`, `file.h`
