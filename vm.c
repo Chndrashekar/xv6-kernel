@@ -60,13 +60,15 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
 static int
 mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 {
+  //cprintf("TEST_LAZY pid size %d : pa %d perm %d\n",
+    //        size, pa, perm);
   char *a, *last;
   pte_t *pte;
 
   a = (char*)PGROUNDDOWN((uint)va);
   last = (char*)PGROUNDDOWN(((uint)va) + size - 1);
   for(;;){
-    if((pte = walkpgdir(pgdir, a, 1)) == 0)
+    if((pte = walkpgdir(pgdir, a, 1)) == 0) 
       return -1;
     if(*pte & PTE_P)
       panic("remap");
@@ -383,6 +385,11 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
     va = va0 + PGSIZE;
   }
   return 0;
+}
+
+int mappages_wrapper(pde_t *pgdir, void *va, uint size, uint pa, int perm)
+{
+  return mappages(pgdir, va, size, pa, perm);
 }
 
 //PAGEBREAK!

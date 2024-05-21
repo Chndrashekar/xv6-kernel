@@ -23,6 +23,15 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int getyear(void);
+int time_scheduled(int);
+int cps(void);
+int fifo_position(int);
+int set_sched_priority(int);
+int get_sched_priority(int);
+int chpr(int pid, int priority);
+int lseek(int, int, int);
+int symlink(char*, char*);
 
 // ulib.c
 int stat(const char*, struct stat*);

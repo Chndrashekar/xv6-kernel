@@ -251,6 +251,9 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
+    if(type == T_SYMLINK) {
+      return ip;
+    }
     if(type == T_FILE && ip->type == T_FILE)
       return ip;
     iunlockput(ip);
@@ -282,6 +285,55 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+/**
+ * Follows a symbolic link up to a maximum depth of 10, returning the final inode if successful.
+ * If a cycle is detected, returns -1.
+ *
+ * @param ip A pointer to the inode of the symbolic link to follow.
+ * @param path A buffer to store the path of the target inode.
+ * @param omode The mode flags for opening the file (e.g. O_NOFOLLOW).
+ * @return A pointer to the target inode if successful, or -1 if a cycle is detected.
+ */
+struct inode *follow_symlink(struct inode *ip, char *path, int omode) {
+    if (ip->type != T_SYMLINK || (omode & O_NOFOLLOW)) {
+        // Not a symbolic link, or O_NOFOLLOW is specified, so return the original inode.
+        return ip;
+    }
+
+    int count = 0;
+    while (ip->type == T_SYMLINK &&
+           count < MAXRECR) {
+        // Follow the symbolic link by reading the target path from the inode.
+        int len = 0;
+        readi(ip, (char*)&len, 0, sizeof(int));
+
+        if (len > MAXPATH) {
+            // Target path is too long, so panic.
+            panic("open: corrupted symlink inode");
+        }
+
+        readi(ip, (char*)path, sizeof(int), len + 1);
+        iunlockput(ip);
+
+        // Look up the target inode by following the target path.
+        if((ip = namei(path)) == 0) {
+          end_op(ROOTDEV);
+          return (struct inode *)-1;
+        }
+        ilock(ip);
+        count++;
+    }
+
+    if (count >= MAXRECR) {
+        // Detected a cycle, so return an error.
+        panic("follow_symlink: detected cycle\n");
+        iunlockput(ip);
+        end_op(ROOTDEV);
+        return (struct inode *)-1;
+    }
+    return ip;
+}
+
 int
 sys_open(void)
 {
@@ -307,6 +359,11 @@ sys_open(void)
       return -1;
     }
     ilock(ip);
+    struct inode *target = follow_symlink(ip, path, omode);
+    if (target == (struct inode *)-1) {
+        return -1;
+    }
+    ip = target;
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
       end_op();
@@ -441,4 +498,83 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+// lseek function to reposition read/write file offset
+int sys_lseek(void) {
+	int fd, offset,base, zero_size, i;
+	int new_offset = 0;
+	char *zero_buffer, *z;
+	struct file *fp;
+
+  if(argfd(0, &fd, &fp) < 0 ||
+     argint(1, &offset) < 0 ||
+     argint(2, &base) < 0) {
+    return -1;
+  }
+
+	if(base == SEEK_SET) {
+		new_offset = offset;
+	} else {
+    // Unsupported base, panic and return error
+    panic("unknown lseek");
+    return -1;
+  }
+  // If the new offset is greater than the file size, zero-fill the gap
+	if (new_offset > fp->ip->size){
+		zero_size = new_offset - fp->ip->size;
+		zero_buffer = kalloc();
+		z = zero_buffer;
+		for (i = 0; i < 4096; i++)
+			*z++ = 0; // Fill the buffer with zeros
+		while (zero_size > 0){
+      // Write the zeros to the file
+			filewrite(fp, zero_buffer, zero_size);
+			zero_size -= 4096;
+		}
+		kfree(zero_buffer);
+    // Set the file size to the new offset
+    fp->ip->size = new_offset;
+	}
+	fp->off = new_offset;
+	return 0;
+}
+
+uint
+sys_symlink(void)
+{
+  char *target_path, *symlink_path;
+  struct inode *ip;
+  int res = 0;
+
+  if (argstr(0, &target_path) < 0 ||
+      argstr(1, &symlink_path) < 0) {
+    return -1;
+  }
+  // Begin the atomic operation
+  begin_op(ROOTDEV);
+
+  // Create the inode for the symlink
+  ip = create(symlink_path, T_SYMLINK, 0, 0);
+  if(ip == 0){
+    res = -1;
+    goto end;
+  }
+
+  // Get the length of the target path and write it to the inode
+  int path_len = strlen(target_path);
+  if (writei(ip, (char*)&path_len, 0, sizeof(int)) != sizeof(int) ||
+      writei(ip, target_path, sizeof(int), path_len + 1) != path_len + 1) {
+    res = -1;
+    goto end;
+  }
+
+  // Update the inode and unlock it
+  iupdate(ip);
+  iunlockput(ip);
+
+end:
+  // End the atomic operation.
+  end_op(ROOTDEV);
+  return res;
 }

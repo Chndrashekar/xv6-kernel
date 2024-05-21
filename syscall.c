@@ -103,6 +103,15 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_getyear(void);
+extern int sys_time_scheduled(void);
+extern int sys_cps(void);
+extern int sys_fifo_position(void);
+extern int sys_set_sched_priority(void);
+extern int sys_get_sched_priority(void);
+extern int sys_chpr(void);
+extern int sys_lseek(void);
+extern int sys_symlink(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,6 +135,15 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_getyear] sys_getyear,
+[SYS_time_scheduled] sys_time_scheduled,
+[SYS_cps]     sys_cps,
+[SYS_fifo_position]   sys_fifo_position,
+[SYS_set_sched_priority]   sys_set_sched_priority,
+[SYS_get_sched_priority]   sys_get_sched_priority,
+[SYS_chpr]    sys_chpr,
+[SYS_lseek]   sys_lseek,
+[SYS_symlink] sys_symlink,
 };
 
 void

@@ -53,6 +53,8 @@ sys_sbrk(void)
   addr = myproc()->sz;
   if(growproc(n) < 0)
     return -1;
+  //myproc()->sz += n;
+  //cprintf("Proc %s: addr %d, size %d, final size %d\n", myproc()->name, addr, n, myproc()->sz);
   return addr;
 }
 
@@ -88,4 +90,53 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// return the year of which Unix version 6 was released
+int
+sys_getyear(void)
+{
+  return 1975;
+}
+
+int
+sys_time_scheduled(void)
+{
+  return timescheduled();
+}
+
+int
+sys_cps(void)
+{
+  return cps();
+}
+
+int
+sys_chpr(void)
+{
+  int pid, pr;
+  if(argint(0, &pid) < 0)
+    return -1;
+  if(argint(1, &pr) < 0)
+    return -1;
+
+  return chpr(pid, pr);
+}
+
+int
+sys_fifo_position(void)
+{
+  return fifoPosition();
+}
+
+int
+sys_set_sched_priority(void)
+{
+  return setSchedPriority();
+}
+
+int
+sys_get_sched_priority(void)
+{
+  return getSchedPriority();
 }

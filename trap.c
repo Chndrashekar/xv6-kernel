@@ -77,6 +77,36 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    //cprintf("PAGE FAULT occured for process %s when trying to access address: 0x%x\n", myproc()->name, rcr2());
+    //cprintf("Resolving page fault using lazy allocation...\n\n");
+    if((tf->cs & 3) == USER_PROC && rcr2() < myproc()->sz) {
+      //cprintf("Checking if the Virtual address is within process address space.\n");
+      uint a;
+      char* mem;
+      a = PGROUNDDOWN(rcr2());
+      mem = kalloc();
+      //cprintf("Allocating a page of physical memory using the kalloc() function.\n");
+      if(mem == 0){
+        cprintf("trap: out of memory\n");
+        goto error;
+      }
+      memset(mem,0,PGSIZE);
+      //cprintf("Mapping the allocated physical memory to virtual address using mappages. Also, setting the access permissions.\n");
+      if(mappages_wrapper(myproc()->pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+        cprintf("trap: out of memory (2)\n");
+        kfree(mem);
+        goto error;
+      }
+      // Print the virtual and physical addresses
+      //cprintf("\nVA: %p is mapped to PA: 0x%x\n\n", (char *)a, V2P(mem));
+    }
+    //cprintf("Lazy allocation successful for process:  %s.\n\n", myproc()->name);
+
+    break;
+    error:
+      myproc()->killed = 1;
+      break;
 
   //PAGEBREAK: 13
   default:

@@ -359,6 +359,20 @@ iunlockput(struct inode *ip)
   iput(ip);
 }
 
+static uint get_level_addr(struct inode *ip, uint addr, uint block_index) {
+  uint *a;
+  struct buf *bp;
+
+  bp = bread(ip->dev, addr);
+  a = (uint*)bp->data;
+  if((addr = a[block_index]) == 0){
+    a[block_index] = addr = balloc(ip->dev);
+    log_write(bp);
+  }
+  brelse(bp);
+  return addr;
+}
+
 //PAGEBREAK!
 // Inode content
 //
@@ -372,8 +386,7 @@ iunlockput(struct inode *ip)
 static uint
 bmap(struct inode *ip, uint bn)
 {
-  uint addr, *a;
-  struct buf *bp;
+  uint addr;
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
@@ -386,16 +399,23 @@ bmap(struct inode *ip, uint bn)
     // Load indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0)
       ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc(ip->dev);
-      log_write(bp);
-    }
-    brelse(bp);
+    return get_level_addr(ip, addr, bn);
+  }
+  bn -= NINDIRECT;
+  // Check if the resulting block index is less than NDOUBLYINDIRECT
+  if(bn < NDOUBLYINDIRECT) {
+    // Load doubly indirect block, allocating if necessary.
+    uint first_level_index = bn / NINDIRECT;
+    uint second_level_index = bn % NINDIRECT;
+
+    if((addr = ip->addrs[NIDIRECT]) == 0)
+      ip->addrs[NIDIRECT] = addr = balloc(ip->dev);
+    // Load the inner layer block.
+    addr = get_level_addr(ip, addr, first_level_index);
+    // Load the disk block.
+    addr = get_level_addr(ip, addr, second_level_index);
     return addr;
   }
-
   panic("bmap: out of range");
 }
 

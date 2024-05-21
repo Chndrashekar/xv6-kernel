@@ -52,6 +52,7 @@ struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, char*, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
+int             symlink(char *target, char *path);
 
 // ide.c
 void            ideinit(void);
@@ -110,6 +111,8 @@ int             growproc(int);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct proc*    myproc();
+struct proc*    fcfsScheduler();
+struct proc*    priorityScheduler();
 void            pinit(void);
 void            procdump(void);
 void            scheduler(void) __attribute__((noreturn));
@@ -120,6 +123,15 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             timescheduled(void);
+int             cps(void);
+int             fifoPosition(void);
+int             setSchedPriority(void);
+int             getSchedPriority(void);
+int             strcmp(const char*, const char*);
+int             excludeShellCommands(const char*);
+int             chpr(int pid, int priority);
+int             run_processes_of_priority(int, struct cpu*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -148,7 +160,7 @@ int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
 
-// syscall.c
+// call.c
 int             argint(int, int*);
 int             argptr(int, char**, int);
 int             argstr(int, char**);
@@ -164,6 +176,7 @@ void            idtinit(void);
 extern uint     ticks;
 void            tvinit(void);
 extern struct spinlock tickslock;
+int mappages_wrapper(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 
 // uart.c
 void            uartinit(void);

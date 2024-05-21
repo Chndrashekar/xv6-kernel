@@ -71,12 +71,20 @@ QEMU = $(shell if which qemu > /dev/null; \
 	echo "***" 1>&2; exit 1)
 endif
 
+ifndef SCHEDULER
+SCHEDULER := DEFAULT
+endif
+
+ifndef FSIZE
+FSIZE := DEFAULT
+endif
+
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer -D $(SCHEDULER) -D $(FSIZE)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 # FreeBSD ld wants ``elf_i386_fbsd''
@@ -181,6 +189,24 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_first\
+	_head\
+	_tail\
+	_uniq\
+	_sleep\
+	_find\
+	_time_scheduled\
+	_justloop\
+	_ps\
+	_dpro\
+	_fifo_position\
+	_set_sched_priority\
+	_get_sched_priority\
+	_nice\
+	_sched_test\
+    _lseek-test\
+    _symtest\
+	_large\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -221,6 +247,10 @@ CPUS := 2
 endif
 QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
+flags:
+	@echo $(SCHEDULER)
+	@echo $(FSIZE)
+
 qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
@@ -251,6 +281,9 @@ EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
 	printf.c umalloc.c\
+	first.c head.c tail.c uniq.c sleep.c find.c time_scheduled.c\
+	justloop.c ps.c dpro.c fifo_position.c set_sched_priority.c\
+	get_sched_priority.c nice.c sched_test.c lseek-test.c symtest.c large.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 

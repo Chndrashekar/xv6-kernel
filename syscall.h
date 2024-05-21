@@ -20,3 +20,12 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+#define SYS_getyear 22
+#define SYS_time_scheduled 23
+#define SYS_cps 24
+#define SYS_fifo_position  25
+#define SYS_set_sched_priority  26
+#define SYS_get_sched_priority 27
+#define SYS_chpr   28
+#define SYS_lseek  29
+#define SYS_symlink 30
